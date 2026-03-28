@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Quiz Host - Hazarpati</title>
+  <style>
+    body { font-family: system-ui, Arial; max-width: 1000px; margin: 20px auto; background :linear-gradient(to top, #11001fff, #811ebbff); color: white; }
+    .card { border: 6px solid #fac20bff; padding: 25px; border-radius: 40px; margin-bottom: 12px; background: rgba(0,0,0,0.3); }
+    .main-layout { display: flex; gap: 15px; align-items: flex-start; }
+    .side-panel { flex: 1; height: 550px; overflow:auto ; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 20px; border: 2px solid gold; }
+    input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 8px; font-size: 16px; color: black; border: 2px solid #ccc; }
+    button { cursor: pointer; padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; border: none; transition: 0.2s; }
+    button:active { transform: scale(0.95); }
+    .player-entry { background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid gold; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center; color: gold; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">Kaun Banega Hazarpati - Host Panel</h1>
+
+  <div class="card">
+    <div style="display:flex; gap: 10px; align-items: center;">
+      <label style="flex:1">Room ID: <input id="roomId" value="room1"/></label>
+      <label style="flex:1">Host Name: <input id="hostName" value="Host Admin"/></label>
+      <button id="connectBtn" style="background: #28a745; color: white; padding: 15px 30px; margin-top: 20px;">CONNECT SERVER</button>
+    </div>
+    <div id="connStatus" style="text-align: center; margin-top: 10px; font-weight: bold; color: #00ff00;"></div>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 10px;">
+      <button id="pauseBtn" onclick="toggleTimer()" style="background: #e74c3c; color: white; padding: 10px 20px;">Pause Timer</button>
+  </div>
+
+  <div class="main-layout">
+    <div id="playerSide" class="side-panel">
+      <h3 style="border-bottom: 2px solid gold; padding-bottom: 5px;">👥 Active Players</h3>
+      <div id="players"></div>
+    </div>
+
+    <div id="eventSide" class="side-panel">
+      <h3 style="border-bottom: 2px solid gold; padding-bottom: 5px;">📜 Live Logs</h3>
+      <pre id="events" style="white-space: pre-wrap; font-size: 13px; color: #00ff00; font-family: monospace;"></pre>
+    </div>
+
+    <div id="questionSide" class="side-panel" style="flex: 1.5; height: auto;">
+      <h3 style="border-bottom: 2px solid gold; padding-bottom: 5px;">🚀 Control Center</h3>
+      
+      <label>Question Format:</label>
+      <select id="qFormat">
+        <option value="text">Text Only</option>
+        <option value="image">Image + Text</option>
+        <option value="audio">Audio + Text</option>
+      </select>
+
+      <label>Question Text:</label>
+      <textarea id="qText" rows="3" placeholder="Enter your question here..."></textarea>
+      
+      <label>Media URL (Image/Audio):</label>
+      <input id="externalUrl" placeholder="https://example.com/image.jpg"/>
+      
+      <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid rgba(255,215,0,0.3);">
+        <label>Set Options & Correct Answer:</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
+          <input id="optA" placeholder="Option A" style="width:47%"> 
+          <input id="optB" placeholder="Option B" style="width:47%">
+          <input id="optC" placeholder="Option C" style="width:47%"> 
+          <input id="optD" placeholder="Option D" style="width:47%">
+        </div>
+        <div style="margin-top: 10px;">
+          Correct Option: 
+          <select id="correctAns" style="width:120px; display: inline-block; margin-left: 10px;">
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+        </div>
+      </div>
+      
+      <label>Time Limit (Seconds):</label>
+      <input id="timeLimit" type="number" value="30"/>
+      
+      <button id="sendQ" style="background: gold; width: 100%; color: black; font-size: 20px; margin-top: 15px; border: 2px solid #000;">
+        SEND QUESTION TO ALL 📢
+      </button>
+      
+      <button id="auto5050" style="background: #e67e22; color: white; width: 100%; font-size: 16px; margin-top: 10px;">
+        ✨ USE 50:50 LIFELINE
+      </button>
+    </div>
+  </div>
+
+<script>
+  let ws;
+  let timerInterval; 
+  let timeLeft;      
+  let playerAnswers = {}; // Players ke answers store karne ke liye
+
+  const log = (t) => { 
+    const el = document.getElementById('events'); 
+    el.textContent = `[${new Date().toLocaleTimeString()}] ${t}\n` + el.textContent; 
+  };
+
+  function startTimer(seconds) {
+    clearInterval(timerInterval); 
+    timeLeft = seconds;
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            log('⏰ Time is UP!');
+        }
+    }, 1000);
+  }
+
+  document.getElementById('connectBtn').onclick = () => {
+    const hostAddr = location.host || "localhost:8080";
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + hostAddr);
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ 
+        type:'join', 
+        payload: { role:'host', roomId: document.getElementById('roomId').value, name: document.getElementById('hostName').value } 
+      }));
+      document.getElementById('connStatus').textContent = '✔ SERVER CONNECTED';
+      log('Connected as Host. Waiting for players...');
+      ws.send(JSON.stringify({ type: 'list_players' }));
+    };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'player_answer') {
+        log(`📢 ANSWER: Player [${msg.payload.name}] chose [${msg.payload.answer}]`);
+        playerAnswers[msg.payload.playerId] = msg.payload.answer; // Answer save karein
+        ws.send(JSON.stringify({ type: 'list_players' })); 
+      }
+      if (msg.type === 'player_joined' || msg.type === 'player_left' || msg.type === 'joined' || msg.type === 'players') {
+        if (msg.type === 'players') renderPlayers(msg.payload);
+        else ws.send(JSON.stringify({ type: 'list_players' }));
+      }
+    };
+  };
+
+  
+  // --- Isse Host Code ke sendQ function mein replace karein ---
+document.getElementById('sendQ').onclick = () => {
+    if(!ws || ws.readyState !== WebSocket.OPEN) return alert("Connect to Server first!");
+    const timeLimit = Number(document.getElementById('timeLimit').value) || 30;
+    playerAnswers = {}; 
+
+    // Reset 50:50 Button on Host for NEW question
+    const btn50 = document.getElementById('auto5050');
+    btn50.disabled = false;
+    btn50.style.opacity = "1";
+
+    const payload = {
+      format: document.getElementById('qFormat').value,
+      text: document.getElementById('qText').value,
+      dataUrl: document.getElementById('externalUrl').value,
+      timeLimitSec: timeLimit,
+      metadata: { 
+        options: [
+          document.getElementById('optA').value || "Option A", 
+          document.getElementById('optB').value || "Option B", 
+          document.getElementById('optC').value || "Option C", 
+          document.getElementById('optD').value || "Option D"
+        ],
+        correct: document.getElementById('correctAns').value 
+      }
+    };
+
+    ws.send(JSON.stringify({ type:'send_question', payload }));
+    startTimer(timeLimit); 
+    log('🚀 Question broadcasted to all players.');
+};
+  document.getElementById('auto5050').onclick = () => {
+    const correct = document.getElementById('correctAns').value; // e.g. 'A'
+    const allOptions = ['A', 'B', 'C', 'D'];
+    
+    // Sirf galat options ki list banayein
+    const wrongOptions = allOptions.filter(opt => opt !== correct);
+    
+    // Galat options mein se random 2 ko shuffle karke chunein
+    const toRemove = wrongOptions.sort(() => 0.5 - Math.random()).slice(0, 2);
+    
+    ws.send(JSON.stringify({ 
+        type: 'lifeline_5050', 
+        payload: { remove: toRemove } 
+    }));
+    
+    log(`✨ Lifeline: Removing options ${toRemove.join(' & ')}`);
+    // Host side par button disable kar sakte hain (optional)
+    document.getElementById('auto5050').disabled = true;
+    document.getElementById('auto5050').style.opacity = "0.5";
+};
+
+  function renderPlayers(players) {
+    const el = document.getElementById('players'); 
+    el.innerHTML = '';
+    if(players.length === 0) el.innerHTML = '<p style="color:gray; text-align:center;">No players connected.</p>';
+    
+    players.forEach(p => {
+      const chosenOpt = playerAnswers[p.playerId] || 'Waiting...';
+      const d = document.createElement('div');
+      d.className = 'player-entry';
+      d.innerHTML = `
+        <div style="font-size: 17px;">👤 <b>${p.name}</b> — Score: <span style="color:gold">${p.score}</span></div>
+        <div style="font-size: 14px; color: #00ff00; margin-top: 4px;">Chosen: ${chosenOpt}</div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button onclick="sendFeedback('${p.playerId}', 'correct')" style="background:#28a745; color:white; flex:1">✅ Correct</button>
+          <button onclick="sendFeedback('${p.playerId}', 'wrong')" style="background:#dc3545; color:white; flex:1">❌ Wrong</button>
+        </div>
+      `;
+      el.appendChild(d);
+    });
+  }
+
+  window.sendFeedback = (pid, result) => {
+    if(!ws) return;
+    ws.send(JSON.stringify({ 
+      type: 'host_feedback_to_player', 
+      payload: { playerId: pid, result: result } 
+    }));
+    
+    if(result === 'correct') {
+      ws.send(JSON.stringify({ type:'score_update', payload: { playerId: pid, delta: 1000 } }));
+    }
+    log(`Feedback [${result.toUpperCase()}] sent to player.`);
+    ws.send(JSON.stringify({ type: 'list_players' }));
+  };
+
+  let isPaused = false;
+  function toggleTimer() {
+    if(!timerInterval && !isPaused) return;
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').innerText = isPaused ? "Resume" : "Pause";
+    if(isPaused) clearInterval(timerInterval);
+    else startTimer(timeLeft);
+    ws.send(JSON.stringify({ type: 'control_timer', payload: { paused: isPaused } }));
+  }
+</script>
+</body>
+</html>

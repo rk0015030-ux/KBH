@@ -1,0 +1,532 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Player </title>
+  <style>
+    body { font-family: 'Helvetica', Arial; background: #0f0c29; color: white; text-align: center; margin: 0; padding: 0; 
+            height:100vh;
+            overflow :hidden;
+  
+  
+  }
+    
+    /* Tabs Layout */
+    .tab-bar { display: flex; background: rgba(0,0,0,0.8); border-bottom: 2px solid gold; position: sticky; top: 0; z-index: 2000; }
+    .tab { flex: 1; padding: 15px; cursor: pointer; font-weight: bold; color: #aaa; }
+    .tab.active { color: gold; border-bottom: 4px solid gold; background: rgba(255,215,0,0.1); }
+
+    .card { border: 2px solid gold; padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.1); max-width: 600px; margin: 0 auto; position: relative; z-index: 5;top:98px; left:50%; transform:translateX(-50%);}
+    
+    /* --- UPDATED KBC ARC TIMER UI --- */
+    .timer-box { 
+        position: fixed; 
+        top: 77px; 
+        right:525px; 
+        width: 160px; 
+        height: 100px; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        z-index: 3000; 
+        overflow: hidden;
+        margin:auto;
+        transform :scale(0.7);
+        transform-origin:center;
+    }
+
+    .timer-container {
+        position: relative;
+        width: 160px;
+        height: 85px;
+        overflow: hidden;
+        border-bottom: 3px solid gold;
+    }
+
+    .timer-dome-bg {
+        position: absolute;
+        bottom: -75px;
+        left: 5px;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 100%, #c710ce 0%, #00152b 80%);
+        border: 3px solid gold; 
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+        z-index: 1;
+    }
+
+    .svg-overlay {
+        position: absolute;
+        top: 0px; 
+        left: 4px; 
+        z-index: 2;
+    }
+
+    .progress-arc {
+        fill: none;
+        stroke: #00ff00;
+        stroke-width: 6; 
+        stroke-linecap: round;
+        /* Path length matches the arc exactly */
+        stroke-dasharray: 236; 
+        stroke-dashoffset: 0;
+        transition: stroke-dashoffset 1s linear, stroke 0.3s linear;
+    }
+
+    #timerLabel { 
+        position: absolute;
+        top:60%;
+        left:50%;
+        transform: translate(-50%,-50%);
+        z-index: 3;
+        font-size: 50px; 
+        font-weight: bold; 
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+        font-family: 'Roboto', serif;
+    }
+
+     /* Container jo Question aur Lifeline dono ko side-by-side rakhega */
+.game-layout {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: 900px;
+    margin: 100px auto;
+    padding: 0 20px;
+}
+
+/* Question card ki margin hata dein kyunki container handle kar raha hai */
+#viewGame .card {
+    margin: 0; 
+    flex: 2; /* Question box bada rahega */
+}
+
+/* Naya Lifeline Panel Style */
+/* Lifeline Status Indicator */
+.lifeline-status-container {
+    position: fixed;
+    top: 180px;         /* Timer ke thoda niche set kiya hai */
+    right: 30px;        /* Right side mein fix rahega */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 2500;
+}
+
+.lifeline-indicator {
+    width: 55px;
+    height: 55px;
+    background: radial-gradient(circle, #2a5298, #1e3c72);
+    border: 2px solid gold;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    transition: all 0.5s ease;
+}
+
+.lifeline-off {
+    background: #222 !important;
+    border-color: #444 !important;
+    color: #666 !important;
+    opacity: 0.4;
+    position: relative;
+}
+
+/* Red Cross icon jab lifeline use ho jaye */
+.lifeline-off::after {
+    content: "✖";
+    position: absolute;
+    color: red;
+    font-size: 20px;
+}
+.card1{
+  border: 2px solid gold; padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.1); max-width: 600px; margin: 0 auto;
+}
+
+/* Blur aur Black effect ke liye */
+.opt-btn.fifty-blur {
+    filter: blur(5px) grayscale(100%);
+    opacity: 0.3 !important;
+    background: #000 !important; /* Thoda black */
+    color: transparent !important; /* Text chupa dega */
+    pointer-events: none; /* Click band */
+    transition: all 0.5s ease;
+}
+
+/* Lifeline indicator jab khatam ho jaye */
+.lifeline-off {
+    background: #222 !important;
+    border-color: #444 !important;
+    color: #666 !important;
+    opacity: 0.4;
+    position: relative;
+}
+.lifeline-off::after {
+    content: "✖";
+    position: absolute;
+    color: red;
+    font-size: 20px;
+}
+/* Player CSS mein check karein */
+.opt-btn.fifty-blur {
+    filter: blur(8px) grayscale(100%);
+    opacity: 0.2 !important;
+    background: #1a1a1a !important; /* Blackish color */
+    color: transparent !important;  /* Text hide ho jayega */
+    pointer-events: none;           /* Click band */
+}
+.card2{
+       border: 2px solid gold; padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.1); max-width: 600px; margin: 0 auto; bottom:100px;
+
+}
+    /* --- END TIMER UI --- */
+
+    .opt-btn { width: 45%; padding: 20px; margin: 10px; font-size: 18px; cursor: pointer; border-radius: 12px; border: none; background: gold; font-weight: bold; color: black; display: inline-block; position: relative; z-index: 10; }
+    .opt-btn:active { transform: scale(0.95); background: orange; }
+    .opt-btn:disabled { background: #555 !important; color: #888 !important; cursor: not-allowed; opacity: 0.6; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 150px; }
+    .stat-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; border: 1px solid gold; }
+    .stat-val { font-size: 24px; font-weight: bold; display: block; color: gold; }
+    
+    img { max-width: 100%; border-radius: 10px; margin: 10px 0; border: 1px solid gold; }
+    input { padding: 12px; width: 80%; border-radius: 8px; margin-bottom: 10px; border: none; font-size: 16px; }
+    #feedback { font-size: 22px; font-weight: bold; margin-top: 15px; min-height: 30px; }
+  </style>
+</head>
+<body>
+
+  <div id="joinBox" class="card1" style="margin-top: 50px;">
+    <h2>Join KBC Game</h2>
+    <input id="roomId" value="room1" placeholder="Room ID"/>
+    <input id="playerName" placeholder="Enter Your Name"/>
+    <button id="connectBtn" style="padding:15px; background:gold; border:none; border-radius:10px; font-weight:bold; cursor:pointer; width:85%; font-size: 18px;">JOIN NOW</button>
+  </div>
+
+  <div id="mainContent" style="display:none;">
+    <div class="tab-bar">
+      <div id="tabGame" class="tab active" onclick="switchTab('game')">🎮 PLAY</div>
+      <div id="tabStats" class="tab" onclick="switchTab('stats')">📊 STATS</div>
+    </div>
+
+    <div class="lifeline-status-container">
+    <div id="status50" class="lifeline-indicator">50:50</div>
+    <div id="statusCall" class="lifeline-indicator">CALL</div>
+</div>
+           
+    <div class="timer-box" id="floatingTimer" style="display:none;">
+    <div class="timer-container">
+        <div class="timer-dome-bg"></div>
+        <svg class="svg-overlay" width="160" height="90">
+            <path id="green-line" class="progress-arc" d="M 8,80 A 72,72 0 0 1 152,80" />
+        </svg>
+        <span id="timerLabel">30</span>
+    </div>
+  </div>
+
+    <div id="viewGame">
+      <div class="card">
+        <h2 id="qBox">Waiting for Question...</h2>
+        <div id="mediaArea"></div>
+        <div id="options">
+          <button id="btnA" class="opt-btn" onclick="submitAns('A')">A</button>
+          <button id="btnB" class="opt-btn" onclick="submitAns('B')">B</button>
+          <button id="btnC" class="opt-btn" onclick="submitAns('C')">C</button>
+          <button id="btnD" class="opt-btn" onclick="submitAns('D')">D</button>
+        </div>
+        <div id="feedback"></div>
+      </div>
+    </div>
+
+    <div id="viewStats" style="display:none;">
+      <div class="card2">
+        <br>
+        <br>
+        <br>
+        <br>
+
+
+        <h3>My Performance</h3>
+        <div class="stats-grid">
+          <div class="stat-item"> Asked: <span class="stat-val" id="statTotal">0</span> </div>
+          <div class="stat-item"> Correct: <span class="stat-val" id="statCorrect" style="color:#2ecc71">0</span> </div>
+          <div class="stat-item"> Wrong: <span class="stat-val" id="statWrong" style="color:#e74c3c">0</span> </div>
+          <div class="stat-item"> Score: <span class="stat-val" id="statScore" style="color:#3498db">0</span> </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let ws, myId, myName, timerInterval;
+  let stats = { asked: 0, correct: 0, wrong: 0, score: 0 };
+
+  const sndCorrect = new Audio('dragon-studio-correct-472358.mp3');
+  const sndWrong = new Audio('wrong buzzer.mp3');
+  const sndTick = new Audio('30 sec timer.mp3');
+  const sndClick = new Audio('question lock sound.mp3'); 
+  sndTick.loop = true;
+
+  function switchTab(type) {
+    document.getElementById('viewGame').style.display = type === 'game' ? 'block' : 'none';
+    document.getElementById('viewStats').style.display = type === 'stats' ? 'block' : 'none';
+    document.getElementById('tabGame').className = 'tab' + (type === 'game' ? ' active' : '');
+    document.getElementById('tabStats').className = 'tab' + (type === 'stats' ? ' active' : '');
+  }
+
+  document.getElementById('connectBtn').onclick = () => {
+    myName = document.getElementById('playerName').value.trim();
+    if(!myName) return alert("Enter Name!");
+
+    [sndCorrect, sndWrong, sndTick, sndClick].forEach(s => { 
+        s.play().then(()=>s.pause()).catch(()=>{}) 
+    });
+
+    const hostAddr = location.host || "localhost:8080";
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + hostAddr);
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ 
+        type:'join', 
+        payload: { role:'player', roomId: document.getElementById('roomId').value, name: myName } 
+      }));
+      document.getElementById('joinBox').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('floatingTimer').style.display = 'flex';
+    };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'joined') myId = msg.payload.playerId;
+      
+      if (msg.type === 'question') {
+          stats.asked++;
+          updateStatsUI();
+          showQ(msg.payload);
+          switchTab('game');
+      }
+      
+      if (msg.type === 'host_feedback') {
+          stopTimer();
+          if (msg.payload.result === 'correct') {
+            stats.correct++;
+            sndCorrect.currentTime = 0; 
+            sndCorrect.play().catch(()=>{});
+            document.getElementById('feedback').innerText = "SAHI JAWAB! 🎉";
+            document.getElementById('feedback').style.color = "#2ecc71";
+          } else {
+            stats.wrong++;
+            sndWrong.currentTime = 0; 
+            sndWrong.play().catch(()=>{});
+            document.getElementById('feedback').innerText = "GALAT JAWAB! ❌";
+            document.getElementById('feedback').style.color = "#e74c3c";
+          }
+          updateStatsUI();
+
+        
+      }
+      
+      if (msg.type === 'scoreboard') {
+          const me = msg.payload.find(p => p.playerId === myId || p.name === myName);
+          if (me) { stats.score = me.score; updateStatsUI(); }
+      }
+    };
+
+   // --- Isse Player Code ke ws.onmessage mein replace karein ---
+ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    
+    if (msg.type === 'joined') myId = msg.payload.playerId;
+    
+    // 1. Question Receive Logic (FIXED: Ab question gayab nahi hoga)
+    if (msg.type === 'question') {
+        stats.asked++;
+        updateStatsUI();
+        
+        // Naya sawal aane par purane 50-50 blur ko hatana
+        document.querySelectorAll('.opt-btn').forEach(b => {
+            b.classList.remove('fifty-blur');
+            b.disabled = false;
+            b.style.opacity = "1";
+        });
+        
+        showQ(msg.payload);
+        switchTab('game');
+    }
+    
+    // 2. 50-50 Lifeline Logic (FIXED: Idhar blur aur black effect apply hoga)
+    if (msg.type === 'lifeline_5050') {
+        const removeList = msg.payload.remove; 
+        removeList.forEach(optChar => {
+            const btn = document.getElementById('btn' + optChar); // btnA, btnB etc.
+            if (btn) {
+                btn.classList.add('fifty-blur');
+                btn.disabled = true;
+            }
+        });
+        document.getElementById('status50').classList.add('lifeline-off');
+    }
+    
+    // 3. Feedback Logic (Sahi/Galat Answer)
+    if (msg.type === 'host_feedback') {
+        stopTimer();
+        const feedbackEl = document.getElementById('feedback');
+        if (msg.payload.result === 'correct') {
+            stats.correct++;
+            sndCorrect.play().catch(()=>{});
+            feedbackEl.innerText = "SAHI JAWAB! 🎉";
+            feedbackEl.style.color = "#2ecc71";
+        } else {
+            stats.wrong++;
+            sndWrong.play().catch(()=>{});
+            feedbackEl.innerText = "GALAT JAWAB! ❌";
+            feedbackEl.style.color = "#e74c3c";
+        }
+        updateStatsUI();
+    }
+    
+    if (msg.type === 'scoreboard') {
+        const me = msg.payload.find(p => p.playerId === myId || p.name === myName);
+        if (me) { stats.score = me.score; updateStatsUI(); }
+    }
+};
+
+                         
+  };
+
+  function showQ(q) {
+    document.getElementById('qBox').innerText = q.text || "Question:";
+    document.getElementById('feedback').innerText = "";
+    document.getElementById('mediaArea').innerHTML = "";
+    if (q.format === 'image') document.getElementById('mediaArea').innerHTML = `<img src="${q.dataUrl}">`;
+
+    const btns = document.querySelectorAll('.opt-btn');
+    btns.forEach((b, i) => {
+      b.disabled = false;
+      b.style.opacity = "1";
+      const optText = (q.metadata.options && q.metadata.options[i]) ? q.metadata.options[i] : String.fromCharCode(65+i);
+      b.innerText = optText;
+    });
+
+    startTimer(q.timeLimitSec || 30);
+  }
+
+  function startTimer(seconds) {
+    stopTimer(); 
+    let timeLeft = seconds;
+    const totalTime = seconds;
+    const dashArray = 235; 
+    const timerDisplay = document.getElementById('timerLabel');
+    const line = document.getElementById('green-line');
+    
+    if(timerDisplay) timerDisplay.innerText = timeLeft;
+    sndTick.currentTime = 0;
+    sndTick.play().catch(()=>{});
+
+    timerInterval = setInterval(() => {
+      if (timeLeft <= 0) {
+        stopTimer();
+        document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+        document.getElementById('feedback').innerText = "TIME UP! ⏰";
+        document.getElementById('feedback').style.color = "#ff0000";
+        return;
+      }
+
+      timeLeft--;
+      if(timerDisplay) timerDisplay.innerText = timeLeft;
+      
+      let progress = (timeLeft / totalTime) * dashArray;
+      line.style.strokeDashoffset = dashArray - progress;
+
+      // Color Logic: Green -> Yellow -> Red
+      let percentage = (timeLeft / totalTime) * 100;
+      if (percentage > 50) {
+          line.style.stroke = "#39FF14"; // Green
+      } else if (percentage > 20) {
+          line.style.stroke = "gold";    // Yellow
+      } else {
+          line.style.stroke = "#ff0000"; // Red
+      }
+
+    }, 1000);
+  }
+
+  function stopTimer() { 
+    clearInterval(timerInterval); 
+    sndTick.pause(); 
+    sndTick.currentTime = 0;
+  }
+      let progress = (timeLeft / totalTime) * dashArray;
+        line.style.strokeDashoffset = dashArray - progress;
+
+        // COLOR TRANSITION LOGIC
+                let percent = timeLeft / totalTime;
+let color;
+
+if (percent > 0.5) {
+  // Green → Yellow
+  let ratio = (percent - 0.5) * 2; 
+  let r = Math.floor(255 * (1 - ratio));
+  let g = 255;
+  color = `rgb(${r},${g},0)`;
+} else {
+  // Yellow → Red
+  let ratio = percent * 2;
+  let r = 255;
+  let g = Math.floor(255 * ratio);
+  color = `rgb(${r},${g},0)`;
+}
+
+line.style.stroke = color;
+
+  function submitAns(choice) {
+    sndClick.currentTime = 0; 
+    sndClick.play().catch(()=>{});
+    stopTimer(); 
+    document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+    document.getElementById('feedback').innerText = "Answer Sent! Wait for Host...";
+    document.getElementById('feedback').style.color = "gold";
+    ws.send(JSON.stringify({ 
+        type: 'player_answer', 
+        payload: { name: myName, answer: choice, playerId: myId } 
+    }));
+  }
+
+  function updateStatsUI() {
+    document.getElementById('statTotal').innerText = stats.asked;
+    document.getElementById('statCorrect').innerText = stats.correct;
+    document.getElementById('statWrong').innerText = stats.wrong;
+    document.getElementById('statScore').innerText = stats.score;
+    // Host se signal aane par lifeline ko off dikhane ke liye
+function updateLifelineStatus(is50Used, isCallUsed) {
+    if (is50Used) {
+        document.getElementById('status50').classList.add('lifeline-off');
+    }
+    if (isCallUsed) {
+        document.getElementById('statusCall').classList.add('lifeline-off');
+    }
+}
+  }
+
+    // 🔥 TIMER RESET AFTER HOST FEEDBACK
+const line = document.getElementById('green-line');
+const dashArray = 225;
+
+// reset arc
+line.style.strokeDashoffset = 0;
+line.style.stroke = "#39FF14"; // green
+
+// reset time (same as question time or default 30)
+let resetTime = 30;
+document.getElementById('timerLabel').innerText = resetTime;
+</script>
+</body>
+</html>
